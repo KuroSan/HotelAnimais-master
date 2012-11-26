@@ -11,8 +11,8 @@ package Classes;
 public enum Diaria {
 	PEQUENO, MEDIO, GRANDE;
 	
-	public static double getValor(Porte porte){
-		switch(porte){
+	public static double getValor(Diaria diaria){
+		switch(diaria){
 		case GRANDE:
 			return 100;
 		case MEDIO:

@@ -9,14 +9,14 @@ package Classes;
  * @author Raul San
  */
 public class Animal {
-    private Dono dono;
+    private Pessoa dono;
     private String nome; 
     private Especie especie; 
     private Double altura; 
     private Double comprimento; 
     private Pessoa responsavel;
     
-    public Animal(Dono dono, String nome, Especie especie, Double altura, Double comprimento, Pessoa responsavel) {    
+    public Animal(Pessoa dono, String nome, Especie especie, Double altura, Double comprimento, Pessoa responsavel) {    
         super(); 
         this.dono = dono; 
         this.nome = nome; 

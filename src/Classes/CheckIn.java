@@ -1,10 +1,10 @@
 package Classes;
 
 import Classes.BancoDeDados;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.Scanner;
 import java.util.Set;
 import Controle.*;
@@ -15,6 +15,7 @@ public class CheckIn extends Evento {
 	private Pessoa resp, dono;
 	private Acomodacao acomodacao;
 	private Porte porte = null;
+	private Diaria diaria;
 
 	private final static int CACHORRO = 1;
 	private final static int GATO = 2;
@@ -30,10 +31,8 @@ public class CheckIn extends Evento {
 	@Override
 	public void executa() throws CadastroException, ParseException {
 
-		BancoDeDados bd = getBd();
-
-		animal = pegaInfoAnimal();
-		porte = getControladorCadastro().classificarPorte(animal, getBd());
+		pegaInfoAnimal();
+		porte = getControladorCadastro().classificarPorte(this.animal, getBd());
 
 		System.out.println("\nAnimal: " + animal.getNome() + " - " + animal.getEspecie() + " - " + porte);
 		System.out.println("Dono: " + animal.getDono().getNome());
@@ -41,45 +40,73 @@ public class CheckIn extends Evento {
 
 		acomodacao = procuraAcomodacoes(porte);
 
-		System.out.println("\nAcomodacao " + acomodacao.getNumero() + " disponivel para o animal.");
-
-		//if (acomodacao != null) {
+		if (acomodacao != null) {
 			cadastraAnimal();
-			System.out.println("\nAnimal Cadastrado com sucesso.");
-		//}
+			System.out.println("\nAcomoda��o " + acomodacao.getNumero() + " dispon�vel para o animal.");
+			diaria = pegaDiaria();
+			Estadia estadia = cadastraEstadia(diaria);
+			mudaEstadoOcupada();
+			System.out.println("CheckIn foi feito na acomoda��o: " + acomodacao.getNumero() + "." +
+					"\nO valor de diaria �: R$" + diaria.getValor(diaria.getDiaria(porte)) +
+					"\nO valor total da estadia �: R$" + estadia.getTaxa());
+		} else { 
+			System.out.println("N�o h� acomoda��es dispon�vel para o animal.");
+		}
 	}
 
-	public Estadia cadastraEstadia(Animal animal, Acomodacao acomodacao)
-			throws ParseException, CadastroException {
+	public Estadia cadastraEstadia(Diaria diaria)throws ParseException, CadastroException {
 		Scanner entrada = new Scanner(System.in);
 
 		// Pegando dados da estadia
-		System.out.println("Data de entrada (dd/MM/yyyy)?");
+		System.out.println("Data de entrada (dd/MM/yyyy): ");
 
 		String x = entrada.next();
 		SimpleDateFormat sdf1 = new SimpleDateFormat("dd/MM/yyyy");
 		SimpleDateFormat sdf2 = new SimpleDateFormat("dd");
 		Date dataEntrada = sdf1.parse(x);
-		int dataEntradaNumero = Integer.parseInt(sdf2.format(sdf2));
+		int dataEntradaNumero = Integer.parseInt(sdf2.format(dataEntrada));
+		
 
-		System.out.println("Numero de dias a ser hospedado?");
+		System.out.println("N�mero de dias a ser hospedado: ");
 		int duracao = entrada.nextInt();
 
-		if (duracao < 1) {
-			System.out
-					.println("Digite novamente o numero de dias a ser hospedadp (Maior que 1)");
+		while (duracao < 1){
+			System.out.println("Digite novamente o n�mero de dias a ser hospedado (Maior que 1): ");
+			duracao = entrada.nextInt();
 		}
 
 		// Cria a Estadia e cadastra no Banco.
-		Estadia novaEstadia = new Estadia(animal, acomodacao, dataEntrada,
-				duracao, calculaTaxaHospedagem(acomodacao, dataEntradaNumero,
-						duracao));
-		getBd().getInstance().getEstadias().add(novaEstadia);
+		Estadia estadia = new Estadia(animal, acomodacao, dataEntrada, duracao, calculaTaxaHospedagem(diaria, dataEntradaNumero, duracao));
+		getBd().getInstance().getEstadias().add(estadia);
 
-		System.out.println("Estadia Criada");
-		return novaEstadia;
+		System.out.println("Estadia Criada, ");
+		return estadia;
 	}
 
+	public void mudaEstadoOcupada() {
+		Set<Acomodacao> acomodacoes = getBd().getInstance().getAcomodacoes();
+		
+		for (Acomodacao acomodacao : acomodacoes) {
+			if (acomodacao == this.acomodacao){
+				acomodacao.setEstado(EstadoAcomodacao.OCUPADA);
+				this.acomodacao.setEstado(EstadoAcomodacao.OCUPADA);
+			}
+		}
+	}
+	
+	public Diaria pegaDiaria(){
+		Porte porteAnimal = acomodacao.getDimensao();
+		switch (porteAnimal){
+		case PEQUENO:
+			return Diaria.PEQUENO;
+		case MEDIO:
+			return Diaria.MEDIO;
+		case GRANDE:
+			return Diaria.GRANDE;
+		}
+		return null;
+	}
+	
 	public Acomodacao procuraAcomodacoes(Porte porte) throws CadastroException, ParseException {
 		try {
 			Set<Acomodacao> acomodacoes = getBd().getInstance().getAcomodacoes();
@@ -97,13 +124,12 @@ public class CheckIn extends Evento {
 		}
 	}
 
-	public double calculaTaxaHospedagem(Acomodacao acomodacao, int dataEntrada,
-			int duracao) throws ParseException {
-		double Taxa = duracao * Diaria.getValor(acomodacao.getDimensao());
+	public double calculaTaxaHospedagem(Diaria diaria, int dataEntrada, int duracao) throws ParseException {
+		double Taxa = duracao * diaria.getValor(diaria);
 		return Taxa;
 	}
 
-	public Animal pegaInfoAnimal() {
+	public void pegaInfoAnimal() {
 		Scanner entrada = new Scanner(System.in);
 
 		// Pega Dados do Dono
@@ -123,6 +149,7 @@ public class CheckIn extends Evento {
 		// Pegar Dados do Animal
 		System.out.print("\nNome do Animal: ");
 		String nomeAnimal = entrada.next();
+		
 		System.out.println("\nEspecie do animal?");
 		System.out.println("1 - Cachorro");
 		System.out.println("2 - Gato");
@@ -131,6 +158,7 @@ public class CheckIn extends Evento {
 		System.out.println("5 - Reptil");
 		System.out.println("6 - Roedor");
 		System.out.print("Especie: ");
+		
 		int especie = entrada.nextInt();
 		Especie especieAnimal = null;
 
@@ -154,8 +182,8 @@ public class CheckIn extends Evento {
 			especieAnimal = Especie.ROEDOR;
 			break;
 		default:
-			System.out
-					.println("\nOp��o inv�lida. Cadastre o Animal Novamente.");
+			System.out.println("\nOp��o inv�lida. Cadastre o Animal Novamente.");
+			break;
 		}
 
 		System.out.print("\nAltura do Animal: ");
@@ -163,22 +191,28 @@ public class CheckIn extends Evento {
 
 		System.out.print("\nComprimento do Animal: ");
 		Double comprimentoAnimal = entrada.nextDouble();
-		Animal animal = new Animal(dono, nomeAnimal, especieAnimal,
-				alturaAnimal, comprimentoAnimal, resp);
-		return animal;
+		this.animal = new Animal(dono, nomeAnimal, especieAnimal,alturaAnimal, comprimentoAnimal, resp);
 	}
 
 	public void cadastraAnimal() throws CadastroException {
 		Set<Animal> animais = getBd().getInstance().getAnimais();
+		boolean animalJaCadastrado = false;
+		
+		System.out.println("Cadastrando Animal...");
 		
 		for (Animal animal : animais) {
-			if (this.animal == animal) {
-				System.out.println("O animal ja est� cadastrado e ser� utilizado.");
-				break;
-			} else {
-				getBd().getInstance().getAnimais().add(this.animal);
-				System.out.println("Animal Cadastrado.");
+			if (animal.getDono().getNome() == this.animal.getDono().getNome()
+					&& animal.getNome() == this.animal.getNome()) {
+				animalJaCadastrado = true;
+				System.out.println("\nAchou Animal no BD");
 			}
+		}
+		
+		if (!animalJaCadastrado){
+			getBd().getInstance().getAnimais().add(this.animal);
+			System.out.println("\nAnimal Cadastrado com sucesso.");
+		} else {
+			System.out.println("O animal " + this.animal.getNome() + " ja estava cadastrado.");
 		}
 	}
 

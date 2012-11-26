@@ -1,10 +1,10 @@
 package Classes;
 
 public class Pessoa {
-	
+
 	protected String nome;
 	protected String telefone;
-	
+
 	public Pessoa(String nome, String telefone){
 		super();
 		this.nome = nome;
@@ -38,6 +38,6 @@ public class Pessoa {
 	public void setTelefone(String telefone) {
 		this.telefone = telefone;
 	}
-	
-	
+
+
 }
